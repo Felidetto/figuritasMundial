@@ -337,14 +337,13 @@ export async function adminLoginAction(email: string, password: string) {
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { success: false, error: "Credenciales incorrectas" };
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin
+  const { data: profile, error: profileError } = await supabase
     .from("admin_profiles")
     .select("id, role")
     .eq("id", data.user.id)
-    .single();
+    .maybeSingle();
 
-  if (!profile || profile.role !== "super_admin") {
+  if (profileError || !profile || profile.role !== "super_admin") {
     await supabase.auth.signOut();
     return { success: false, error: "No tienes autorización para acceder a este panel" };
   }
