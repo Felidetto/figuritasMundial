@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist } from "next/font/google";
 import { CartProvider } from "@/hooks/use-cart";
-import { SiteFooter, SiteHeader } from "@/components/shared/site-chrome";
+import { PublicShell } from "@/components/shared/public-shell";
 import "./globals.css";
 
 const geist = Geist({
@@ -29,9 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="es-CL" className={`${geist.variable} h-full`}>
       <body className="flex min-h-full flex-col font-sans antialiased">
         <CartProvider>
-          <SiteHeader />
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">{children}</main>
-          <SiteFooter />
+          <PublicShell>{children}</PublicShell>
         </CartProvider>
       </body>
     </html>

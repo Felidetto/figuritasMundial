@@ -265,7 +265,7 @@ export function InventoryVisualAdmin({ initialRows }: { initialRows: InventoryRo
 
   return (
     <div>
-      <div className="sticky top-14 z-30 -mx-4 mb-4 space-y-3 border-b border-slate-200 bg-slate-50/95 px-4 pb-4 pt-1 backdrop-blur-sm lg:top-0 lg:-mx-8 lg:px-8">
+      <div className="sticky top-[3.75rem] z-30 -mx-4 mb-4 space-y-3 border-b border-slate-200 bg-slate-50 px-4 pb-4 pt-2 shadow-sm lg:top-0 lg:-mx-8 lg:px-8">
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5 lg:gap-3">
           {[
             ["Stock físico total", summary.physical],
