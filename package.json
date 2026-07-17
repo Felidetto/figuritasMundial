@@ -23,6 +23,7 @@
     "secret:scan": "node scripts/secret-scan.mjs",
     "stock:test-setup": "node scripts/set-test-stock.mjs",
     "test:smoke": "playwright test tests/e2e/local-smoke.spec.ts",
+    "test:smoke:prod": "playwright test --config playwright.prod.config.ts",
     "vercel:env": "node scripts/sync-vercel-env.mjs"
   },
   "dependencies": {
