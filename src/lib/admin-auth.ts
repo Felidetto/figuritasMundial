@@ -1,4 +1,3 @@
-import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type AdminProfile = {
@@ -14,13 +13,12 @@ export async function requireSuperAdminAction(): Promise<AdminProfile | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const admin = createAdminClient();
-  const { data: profile } = await admin
+  const { data: profile, error } = await supabase
     .from("admin_profiles")
     .select("id, email, role")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  if (!profile || profile.role !== "super_admin") return null;
+  if (error || !profile || profile.role !== "super_admin") return null;
   return profile as AdminProfile;
 }
