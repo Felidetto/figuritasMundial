@@ -1,12 +1,16 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { adjustStockDeltaAction } from "@/actions/admin";
+import { useMemo, useRef, useState, useTransition } from "react";
+import { adjustStockAction, adjustStockDeltaAction } from "@/actions/admin";
 import { matchesStickerSearch } from "@/lib/catalog/search";
 import type { CatalogSectionDTO } from "@/lib/catalog/group";
 import type { CatalogSticker } from "@/types";
 
-const REASONS = { plus: "Nueva lámina recibida", minus: "Corrección manual" } as const;
+const REASONS = {
+  plus: "Nueva lámina recibida",
+  minus: "Corrección manual",
+  exact: "Corrección de inventario",
+} as const;
 
 export interface InventoryRow {
   id: string;
@@ -56,6 +60,118 @@ function toSections(rows: InventoryRow[]): CatalogSectionDTO[] {
   return Array.from(map.values()).sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+function availableQty(physical: number, reserved: number, sold: number) {
+  return Math.max(physical - reserved - sold, 0);
+}
+
+function StockQuantity({
+  row,
+  disabled,
+  onMessage,
+  onUpdated,
+}: {
+  row: InventoryRow;
+  disabled: boolean;
+  onMessage: (msg: string) => void;
+  onUpdated: (stickerId: string, physical: number) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const [isPending, startTransition] = useTransition();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const minPhysical = row.reserved_stock + row.sold_stock;
+
+  function startEdit() {
+    if (disabled || isPending) return;
+    setDraft(String(row.physical_stock));
+    setEditing(true);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.select();
+    });
+  }
+
+  function cancelEdit() {
+    setEditing(false);
+    setDraft("");
+  }
+
+  function commitEdit() {
+    if (!editing) return;
+    const parsed = Number.parseInt(draft, 10);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      onMessage("Ingresa una cantidad válida");
+      cancelEdit();
+      return;
+    }
+    if (parsed === row.physical_stock) {
+      cancelEdit();
+      return;
+    }
+    if (parsed < minPhysical) {
+      onMessage(
+        `El stock no puede ser menor que lo comprometido (${minPhysical}: reservas + vendidas)`,
+      );
+      cancelEdit();
+      return;
+    }
+
+    setEditing(false);
+    startTransition(async () => {
+      const res = await adjustStockAction({
+        stickerId: row.id,
+        newPhysical: parsed,
+        reason: REASONS.exact,
+      });
+      if (!res.success) {
+        onMessage(res.error ?? "Error al ajustar");
+        return;
+      }
+      onUpdated(row.id, parsed);
+      onMessage("Stock actualizado");
+    });
+  }
+
+  if (editing) {
+    return (
+      <input
+        ref={inputRef}
+        type="number"
+        inputMode="numeric"
+        min={minPhysical}
+        value={draft}
+        disabled={disabled || isPending}
+        aria-label={`Nueva cantidad para ${row.code}`}
+        className="h-8 w-12 rounded border px-1 text-center text-sm font-bold"
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            commitEdit();
+          }
+          if (e.key === "Escape") {
+            e.preventDefault();
+            cancelEdit();
+          }
+        }}
+        onBlur={commitEdit}
+      />
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      disabled={disabled || isPending}
+      onDoubleClick={startEdit}
+      title="Doble clic para editar cantidad"
+      className="min-w-[1.5rem] cursor-text rounded px-1 font-bold hover:bg-slate-100 disabled:opacity-40"
+    >
+      {row.physical_stock}
+    </button>
+  );
+}
+
 export function InventoryVisualAdmin({ initialRows }: { initialRows: InventoryRow[] }) {
   const [rows, setRows] = useState(initialRows);
   const [search, setSearch] = useState("");
@@ -101,6 +217,20 @@ export function InventoryVisualAdmin({ initialRows }: { initialRows: InventoryRo
 
   const sections = useMemo(() => toSections(filteredRows), [filteredRows]);
 
+  function updatePhysical(stickerId: string, physical: number) {
+    setRows((prev) =>
+      prev.map((r) =>
+        r.id === stickerId
+          ? {
+              ...r,
+              physical_stock: physical,
+              available_qty: availableQty(physical, r.reserved_stock, r.sold_stock),
+            }
+          : r,
+      ),
+    );
+  }
+
   function applyDelta(stickerId: string, delta: number, reason: string) {
     startTransition(async () => {
       const res = await adjustStockDeltaAction({ stickerId, delta, reason });
@@ -109,18 +239,15 @@ export function InventoryVisualAdmin({ initialRows }: { initialRows: InventoryRo
         return;
       }
       setRows((prev) =>
-        prev.map((r) =>
-          r.id === stickerId
-            ? {
-                ...r,
-                physical_stock: r.physical_stock + delta,
-                available_qty: Math.max(
-                  r.physical_stock + delta - r.reserved_stock - r.sold_stock,
-                  0,
-                ),
-              }
-            : r,
-        ),
+        prev.map((r) => {
+          if (r.id !== stickerId) return r;
+          const physical = r.physical_stock + delta;
+          return {
+            ...r,
+            physical_stock: physical,
+            available_qty: availableQty(physical, r.reserved_stock, r.sold_stock),
+          };
+        }),
       );
       setMessage("Stock actualizado");
     });
@@ -165,6 +292,10 @@ export function InventoryVisualAdmin({ initialRows }: { initialRows: InventoryRo
       </div>
 
       {message && <p className="mb-3 text-sm text-emerald-700">{message}</p>}
+      <p className="mb-3 text-xs text-slate-500">
+        Usa +/− para ajustes rápidos. Doble clic en la cantidad central para editar por teclado
+        (Enter guarda, Esc cancela).
+      </p>
 
       <div className="space-y-4">
         {sections.map((sec) => (
@@ -191,7 +322,12 @@ export function InventoryVisualAdmin({ initialRows }: { initialRows: InventoryRo
                       >
                         −
                       </button>
-                      <span className="min-w-[1.5rem] font-bold">{row.physical_stock}</span>
+                      <StockQuantity
+                        row={row}
+                        disabled={isPending}
+                        onMessage={setMessage}
+                        onUpdated={updatePhysical}
+                      />
                       <button
                         type="button"
                         disabled={isPending}
