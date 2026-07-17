@@ -1,63 +1,79 @@
 # Despliegue — Láminas 2026
 
-## Proveedor recomendado: Vercel
+## Proveedor: Vercel
 
-El repositorio incluye `vercel.json` con cron de expiración de reservas. Vercel soporta nativamente:
+- **Proyecto:** `figuritas-mundial/figuritas-mundial`
+- **Branch productiva:** `production`
+- **Framework:** Next.js 16.2.10 (App Router, Server Actions, middleware)
 
-- Next.js 16 App Router
-- Server Actions
-- Middleware (`src/middleware.ts`)
-- Rutas API (`/api/cron/expire-reservations`)
+Cloudflare Workers/OpenNext no está configurado; Vercel es la opción de menor riesgo para este MVP.
 
-**Cloudflare Workers/OpenNext** requeriría adaptador adicional y validación de compatibilidad con middleware y Server Actions; no recomendado para el MVP.
+## Comandos
 
-## Branches
+```bash
+# Variables locales → Vercel (no imprime valores)
+pnpm vercel:env
 
-| Branch       | Uso                                      |
-| ------------ | ---------------------------------------- |
-| `main`       | Desarrollo estable                       |
-| `production` | Despliegue productivo (Vercel Production) |
+# Despliegue productivo manual
+pnpm dlx vercel deploy --prod --yes
 
-Configurar Vercel: **Production Branch = `production`**.
+# Verificación remota Supabase
+pnpm db:verify
 
-## Variables de entorno (Production)
+# Regenerar tipos TS
+pnpm db:types
 
-Configurar en Vercel → Project → Settings → Environment Variables (Production):
+# Tests
+pnpm test:all
+pnpm test:smoke          # local
+pnpm test:smoke:prod     # producción (requiere PRODUCTION_URL)
 
-| Variable                         | Entorno   | Notas                                      |
-| -------------------------------- | --------- | ------------------------------------------ |
-| `NEXT_PUBLIC_SUPABASE_URL`       | Production | URL del proyecto Supabase remoto          |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY`  | Production | Clave anon (pública)                       |
-| `SUPABASE_SERVICE_ROLE_KEY`      | Production | **Solo servidor** — nunca `NEXT_PUBLIC_`   |
-| `NEXT_PUBLIC_APP_URL`            | Production | URL pública final (ej. `https://…vercel.app`) |
-| `CRON_SECRET`                    | Production | Secreto para `/api/cron/expire-reservations` |
+# Rollback: Vercel Dashboard → Deployments → Promote previous deployment
+```
 
-Alias opcionales soportados por `src/lib/env.ts`:
+## Variables de entorno (solo nombres)
 
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` → equivalente a anon
-- `SUPABASE_SECRET_KEY` → equivalente a service role
+| Variable | Entorno | Notas |
+| -------- | ------- | ----- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Production, Preview | URL Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Production, Preview | Clave pública (alias: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Production, Preview | Solo servidor (alias: `SUPABASE_SECRET_KEY`) |
+| `NEXT_PUBLIC_APP_URL` | Production | URL HTTPS pública del sitio |
+| `CRON_SECRET` | Production | Bearer token para cron de expiración |
 
-## Preview / desarrollo
+Sincronización: `pnpm vercel:env` (lee `.env.local`, no versionado).
 
-- **Local:** `.env.local` (generado con `pnpm setup:env`, no versionado)
-- **Preview (Vercel):** mismas variables apuntando a Supabase remoto o proyecto de staging
+## Branches Git
+
+| Branch | Uso |
+| ------ | --- |
+| `main` | Desarrollo estable |
+| `production` | Despliegue productivo |
+
+## Cron de reservas
+
+- **Vercel Hobby:** `vercel.json` usa `0 3 * * *` (1× día, 03:00 UTC).
+- **Expiración en uso:** también se invoca `expire_reservations()` al cargar `/elegir`.
+- **Frecuencia alta (cada 2 min):** requiere Vercel Pro o cron externo (ej. cron-job.org) contra:
+  `GET /api/cron/expire-reservations` con header `Authorization: Bearer <CRON_SECRET>`.
 
 ## Post-despliegue
 
-1. Obtener URL pública de Vercel
-2. Actualizar `NEXT_PUBLIC_APP_URL` en Production
-3. Redeploy
-4. Ejecutar smoke test: `pnpm test:smoke` contra URL pública (configurar `NEXT_PUBLIC_APP_URL`)
-5. Verificar `/elegir`, admin, reserva y pedido público
-
-## Cron
-
-Vercel Cron invoca `GET /api/cron/expire-reservations` cada 2 minutos (`vercel.json`).
-El endpoint exige header `Authorization: Bearer <CRON_SECRET>`.
+1. Obtener URL de Vercel (`*.vercel.app`)
+2. Actualizar `NEXT_PUBLIC_APP_URL` en Vercel Production
+3. `pnpm vercel:env` + redeploy
+4. Smoke test productivo
 
 ## Seguridad
 
-- Service role solo en server actions / API routes
-- Admin: middleware + `requireAdminAction()` + `admin_profiles`
-- `/admin/*`: `robots: noindex` en layout
-- Catálogo remoto: 980 códigos, stock real vía admin (sin seed ficticio en producción)
+- Service role nunca en cliente
+- Admin protegido por middleware + `admin_profiles`
+- `/admin/*`: `robots: noindex`
+- Catálogo: 980 códigos en Supabase remoto, stock vía panel admin
+
+## URL pública
+
+_(Actualizar tras cada despliegue productivo)_
+
+- **URL:** pendiente de registrar tras deploy exitoso
+- **Último deploy:** pendiente
