@@ -73,7 +73,6 @@ Sincronización: `pnpm vercel:env` (lee `.env.local`, no versionado).
 
 ## URL pública
 
-_(Actualizar tras cada despliegue productivo)_
-
-- **URL:** pendiente de registrar tras deploy exitoso
-- **Último deploy:** pendiente
+- **URL:** https://figuritas-mundial-blue.vercel.app
+- **Último deploy:** 2026-07-17
+- **Commit desplegado:** `e9e9bee` (production)
