@@ -5,7 +5,12 @@ import { useRouter } from "next/navigation";
 import { createReservationAction } from "@/actions/reservations";
 import { refreshCatalogAction } from "@/actions/catalog";
 import { useCart } from "@/hooks/use-cart";
-import { calculatePricing, qtyToPromo50, type PricingRule } from "@/lib/pricing";
+import {
+  calculatePricing,
+  type PricingRule,
+  qtyToPromo50,
+  pack51AddMessage,
+} from "@/lib/pricing";
 import { matchesStickerSearch } from "@/lib/catalog/search";
 import type { CatalogSectionDTO } from "@/lib/catalog/group";
 import { dtoToCatalogSticker } from "@/lib/catalog/group";
@@ -43,6 +48,7 @@ export function CatalogClient({
   const [viewMode, setViewMode] = useState<"full" | "buyable">("full");
   const [lastUnitsOnly, setLastUnitsOnly] = useState(false);
   const [expandAll, setExpandAll] = useState<boolean | null>(null);
+  const [pack51Notice, setPack51Notice] = useState<string | null>(null);
   const [conflictCodes, setConflictCodes] = useState<string[] | null>(null);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -108,12 +114,12 @@ export function CatalogClient({
       return { subtotal: 0, savings: 0, isPromo: false };
     }
     try {
-      const p = calculatePricing(totalQty, pricingRules);
+      const p = calculatePricing(totalQty);
       return { subtotal: p.subtotal, savings: p.savings, isPromo: p.isPromo };
     } catch {
       return { subtotal: 0, savings: 0, isPromo: false };
     }
-  }, [totalQty, pricingRules, minPickup]);
+  }, [totalQty, minPickup]);
 
   const defaultOpenFor = useCallback(
     (sec: CatalogSectionDTO) => {
@@ -125,6 +131,9 @@ export function CatalogClient({
 
   function handleAdd(sticker: CatalogSticker) {
     if (sticker.available_qty <= 0 || !sticker.enabled) return;
+    if (totalQty === 50) {
+      setPack51Notice(pack51AddMessage(51));
+    }
     addItem({
       stickerId: sticker.id,
       code: sticker.code,
@@ -305,6 +314,19 @@ export function CatalogClient({
         onReserve={handleReserve}
         isPending={isPending}
       />
+
+      {pack51Notice && totalQty === 51 && (
+        <div className="fixed inset-x-4 bottom-36 z-40 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900 lg:bottom-8 lg:left-auto lg:right-[340px] lg:max-w-sm">
+          <p>{pack51Notice}</p>
+          <button
+            type="button"
+            onClick={() => setPack51Notice(null)}
+            className="mt-2 text-emerald-700 underline"
+          >
+            Entendido
+          </button>
+        </div>
+      )}
 
       {conflictCodes && (
         <StockConflictModal

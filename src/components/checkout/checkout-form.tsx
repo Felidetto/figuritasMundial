@@ -28,7 +28,6 @@ export function CheckoutForm({
   reservation,
   minShipping,
   shippingCost: shippingCostClp,
-  pickupCity,
 }: CheckoutFormProps) {
   const router = useRouter();
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -165,7 +164,7 @@ export function CheckoutForm({
         <div className="flex gap-4">
           <label className="flex items-center gap-2">
             <input type="radio" value="pickup" {...register("deliveryMethod")} />
-            Retiro en {pickupCity} (sin costo)
+            Retiro en nuestro domicilio — Gratis
           </label>
           <label className="flex items-center gap-2">
             <input
@@ -174,7 +173,7 @@ export function CheckoutForm({
               {...register("deliveryMethod")}
               disabled={reservation.item_count < minShipping}
             />
-            Despacho (+{formatCLP(shippingCostClp)})
+            Despacho — {formatCLP(shippingCostClp)} — Disponible desde {minShipping} láminas
             {reservation.item_count < minShipping && (
               <span className="text-xs text-slate-500">(desde {minShipping} láminas)</span>
             )}

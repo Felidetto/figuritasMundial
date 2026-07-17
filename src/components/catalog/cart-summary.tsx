@@ -1,6 +1,7 @@
 "use client";
 
 import { formatCLP } from "@/lib/utils";
+import { PACK_50_TOTAL } from "@/lib/pricing";
 import type { CartItem } from "@/types";
 
 interface CartSummaryProps {
@@ -51,20 +52,21 @@ function SummaryContent({
 
       {canReserve && toPromo50 > 0 && (
         <p className="mt-1 text-sm text-emerald-700">
-          Llevas {totalQty} láminas. Agrega {toPromo50} más para obtener 50 por {formatCLP(20000)}.
+          Llevas {totalQty} láminas. Agrega {toPromo50} más para el pack de 50 por{" "}
+          {formatCLP(PACK_50_TOTAL)}.
         </p>
       )}
 
       {isPromo && (
         <p className="mt-1 text-sm font-semibold text-emerald-600">
-          Promoción aplicada: 50 láminas por {formatCLP(20000)}.
+          ¡Activaste el pack de 50 por {formatCLP(PACK_50_TOTAL)}!
           {savings > 0 && ` Ahorras ${formatCLP(savings)}.`}
         </p>
       )}
 
       {totalQty >= minShipping && (
         <p className="mt-1 text-xs text-slate-500">
-          Despacho disponible (+{formatCLP(shippingCost)})
+          Despacho disponible desde {minShipping} láminas (+{formatCLP(shippingCost)})
         </p>
       )}
 

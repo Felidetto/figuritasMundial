@@ -1,81 +1,96 @@
-import type { PricingRule } from "@/lib/pricing";
 import {
   calculatePricing,
   canShip,
   shippingCost,
+  totalWithShipping,
   qtyToPromo50,
+  UNIT_PRICE,
+  PACK_50_TOTAL,
+  PACK_50_QTY,
   DEFAULT_MIN_PICKUP,
   DEFAULT_MIN_SHIPPING,
-  PROMO_50_TOTAL,
+  DEFAULT_SHIPPING_COST,
+  pack51AddMessage,
 } from "@/lib/pricing";
 
-const rules: PricingRule[] = [
-  { id: "1", name: "15-24", rule_type: "tier", min_qty: 15, max_qty: 24, price_per_unit: 500, fixed_total: null, priority: 10, active: true },
-  { id: "2", name: "25-39", rule_type: "tier", min_qty: 25, max_qty: 39, price_per_unit: 450, fixed_total: null, priority: 20, active: true },
-  { id: "3", name: "40-49", rule_type: "tier", min_qty: 40, max_qty: 49, price_per_unit: 425, fixed_total: null, priority: 30, active: true },
-  { id: "4", name: "51+", rule_type: "tier", min_qty: 51, max_qty: null, price_per_unit: 400, fixed_total: null, priority: 50, active: true },
-  { id: "5", name: "Promo 50", rule_type: "fixed_exact", min_qty: 50, max_qty: 50, price_per_unit: null, fixed_total: 20000, priority: 100, active: true },
-];
-
-describe("calculatePricing", () => {
-  it("rechaza menos de 15 láminas", () => {
-    expect(() => calculatePricing(14, rules)).toThrow("MIN_QUANTITY");
+describe("calculatePricing — reglas definitivas", () => {
+  it.each([
+    [1, 400],
+    [10, 4000],
+    [49, 19600],
+    [50, 15000],
+    [51, 15400],
+    [52, 15800],
+    [53, 16200],
+    [60, 19000],
+    [100, 35000],
+  ])("cantidad %i → subtotal %i", (qty, expected) => {
+    expect(calculatePricing(qty).subtotal).toBe(expected);
   });
 
-  it("calcula tramo 15-24 a $500", () => {
-    expect(calculatePricing(20, rules).subtotal).toBe(10000);
+  it("50 es promoción pack", () => {
+    const r = calculatePricing(50);
+    expect(r.isPromo).toBe(true);
+    expect(r.ruleName).toBe("pack_50");
   });
 
-  it("calcula tramo 25-39 a $450", () => {
-    expect(calculatePricing(30, rules).subtotal).toBe(13500);
+  it("51+ mantiene base del pack", () => {
+    const r = calculatePricing(51);
+    expect(r.extraUnits).toBe(1);
+    expect(r.ruleName).toBe("pack_50_plus");
   });
 
-  it("calcula tramo 40-49 a $425", () => {
-    expect(calculatePricing(45, rules).subtotal).toBe(19125);
-  });
-
-  it("aplica promoción de 50 láminas a $20.000", () => {
-    const result = calculatePricing(50, rules);
-    expect(result.subtotal).toBe(PROMO_50_TOTAL);
-    expect(result.isPromo).toBe(true);
-  });
-
-  it("calcula 51+ a $400 c/u", () => {
-    expect(calculatePricing(55, rules).subtotal).toBe(22000);
+  it("rechaza cantidad 0", () => {
+    expect(() => calculatePricing(0)).toThrow("MIN_QUANTITY");
   });
 });
 
-describe("canShip", () => {
-  it("no permite despacho bajo 50", () => {
+describe("entrega y despacho", () => {
+  it.each([
+    [49, "pickup", 19600],
+    [50, "pickup", 15000],
+    [50, "shipping", 17000],
+    [51, "pickup", 15400],
+    [51, "shipping", 17400],
+    [53, "pickup", 16200],
+    [53, "shipping", 18200],
+    [100, "pickup", 35000],
+    [100, "shipping", 37000],
+  ])("%i con %s → total %i", (qty, method, expected) => {
+    expect(
+      totalWithShipping(qty, undefined, method as "pickup" | "shipping", DEFAULT_SHIPPING_COST),
+    ).toBe(expected);
+  });
+
+  it("rechaza despacho con 49", () => {
+    expect(() => shippingCost(49, "shipping")).toThrow("SHIPPING_MIN_NOT_MET");
     expect(canShip(49)).toBe(false);
     expect(canShip(50)).toBe(true);
   });
-});
 
-describe("shippingCost", () => {
   it("retiro sin costo", () => {
-    expect(shippingCost(50, "pickup")).toBe(0);
-  });
-
-  it("despacho cobra aparte desde 50", () => {
-    expect(shippingCost(50, "shipping", 4490)).toBe(4490);
-  });
-
-  it("rechaza despacho bajo mínimo", () => {
-    expect(() => shippingCost(30, "shipping")).toThrow("SHIPPING_MIN_NOT_MET");
+    expect(shippingCost(10, "pickup")).toBe(0);
   });
 });
 
-describe("qtyToPromo50", () => {
-  it("calcula faltante para promo", () => {
+describe("mensaje 50→51", () => {
+  it("mensaje positivo al agregar lámina 51", () => {
+    expect(pack51AddMessage(51)).toContain("15.400");
+  });
+});
+
+describe("constantes", () => {
+  it("valores base", () => {
+    expect(UNIT_PRICE).toBe(400);
+    expect(PACK_50_TOTAL).toBe(15000);
+    expect(PACK_50_QTY).toBe(50);
+    expect(DEFAULT_MIN_PICKUP).toBe(1);
+    expect(DEFAULT_MIN_SHIPPING).toBe(50);
+    expect(DEFAULT_SHIPPING_COST).toBe(2000);
+  });
+
+  it("qtyToPromo50", () => {
     expect(qtyToPromo50(35)).toBe(15);
     expect(qtyToPromo50(50)).toBe(0);
-  });
-});
-
-describe("minimum pickup", () => {
-  it("mínimo es 15", () => {
-    expect(DEFAULT_MIN_PICKUP).toBe(15);
-    expect(DEFAULT_MIN_SHIPPING).toBe(50);
   });
 });

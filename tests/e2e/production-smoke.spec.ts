@@ -44,6 +44,25 @@ test.describe("Smoke producción", () => {
     await expect(page).toHaveURL(/\/admin\/login/);
   });
 
+  test("admin dashboard exige login", async ({ page }) => {
+    await page.goto("/admin/dashboard");
+    await expect(page).toHaveURL(/\/admin\/login/);
+  });
+
+  test("login admin carga", async ({ page }) => {
+    await page.goto("/admin/login");
+    await expect(page.getByRole("heading", { name: /Panel Super Admin/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Iniciar sesión" })).toBeVisible();
+  });
+
+  test("precios públicos actualizados", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByText(/Pack de 50 láminas a elección/i)).toBeVisible();
+    await expect(page.getByText(/\$15\.000|\$15,000|15\.000/)).toBeVisible();
+    await expect(page.getByText(/Desde la lámina 51/i)).toBeVisible();
+    await expect(page.getByText(/Despacho.*2\.000|2,000/i)).toBeVisible();
+  });
+
   test("no expone service role en HTML", async ({ page }) => {
     await page.goto("/elegir");
     const html = await page.content();
