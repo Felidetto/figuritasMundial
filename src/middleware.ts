@@ -38,10 +38,6 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/admin/login", request.url));
   }
 
-  if (isLogin && user) {
-    return NextResponse.redirect(new URL("/admin", request.url));
-  }
-
   return response;
 }
 

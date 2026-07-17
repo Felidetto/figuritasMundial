@@ -1,17 +1,14 @@
-import { redirect } from "next/navigation";
+import { AdminPage } from "@/app/admin/layout";
 import { getAdminSettingsAction } from "@/actions/admin";
-import { AdminNav } from "@/components/admin/admin-nav";
 import { SettingsForm } from "@/components/admin/settings-form";
 
 export default async function AdminSettingsPage() {
   const settings = await getAdminSettingsAction();
-  if (!settings) redirect("/admin/login");
+  if (!settings) return null;
 
   return (
-    <div>
-      <AdminNav />
-      <h1 className="mb-6 text-2xl font-bold">Configuración</h1>
+    <AdminPage title="Configuración">
       <SettingsForm settings={settings} />
-    </div>
+    </AdminPage>
   );
 }

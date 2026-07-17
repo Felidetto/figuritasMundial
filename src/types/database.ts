@@ -44,16 +44,19 @@ export type Database = {
           created_at: string
           email: string
           id: string
+          role: string
         }
         Insert: {
           created_at?: string
           email: string
           id: string
+          role?: string
         }
         Update: {
           created_at?: string
           email?: string
           id?: string
+          role?: string
         }
         Relationships: []
       }
@@ -241,6 +244,51 @@ export type Database = {
             columns: ["sticker_id"]
             isOneToOne: false
             referencedRelation: "stickers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_status_logs: {
+        Row: {
+          admin_id: string | null
+          created_at: string
+          from_status: Database["public"]["Enums"]["order_status"] | null
+          id: string
+          note: string | null
+          order_id: string
+          to_status: Database["public"]["Enums"]["order_status"]
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["order_status"] | null
+          id?: string
+          note?: string | null
+          order_id: string
+          to_status: Database["public"]["Enums"]["order_status"]
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string
+          from_status?: Database["public"]["Enums"]["order_status"] | null
+          id?: string
+          note?: string | null
+          order_id?: string
+          to_status?: Database["public"]["Enums"]["order_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_status_logs_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "admin_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_status_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
             referencedColumns: ["id"]
           },
         ]
@@ -621,8 +669,30 @@ export type Database = {
       }
       expire_reservations: { Args: never; Returns: number }
       generate_public_code: { Args: { prefix?: string }; Returns: string }
+      get_admin_dashboard_stats: { Args: never; Returns: Json }
       get_setting: { Args: { p_default?: Json; p_key: string }; Returns: Json }
+      get_sticker_movements: {
+        Args: { p_limit?: number; p_sticker_id: string }
+        Returns: {
+          admin_id: string | null
+          created_at: string
+          id: string
+          movement_type: Database["public"]["Enums"]["movement_type"]
+          qty_delta: number
+          reason: string | null
+          reference_id: string | null
+          reference_type: string | null
+          sticker_id: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "inventory_movements"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       is_admin: { Args: never; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
       sync_full_catalog: { Args: never; Returns: Json }
     }
     Enums: {

@@ -1,7 +1,6 @@
 "use server";
 
 import { createAdminClient, isSupabaseConfigured } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
 import { groupCatalogBySection, type CatalogSectionDTO } from "@/lib/catalog/group";
 import type { AppSettings, CatalogSticker } from "@/types";
 import type { PricingRule } from "@/lib/pricing";
@@ -72,9 +71,9 @@ export async function getPublicSettingsAction(): Promise<Partial<AppSettings>> {
   if (!isSupabaseConfigured()) {
     return {
       store_name: "Láminas 2026",
-      min_pickup_qty: 15,
+      min_pickup_qty: 1,
       min_shipping_qty: 50,
-      shipping_cost: 4490,
+      shipping_cost: 2000,
       pickup_city: "Osorno",
     };
   }
@@ -96,9 +95,9 @@ export async function getPublicSettingsAction(): Promise<Partial<AppSettings>> {
 
   return {
     store_name: (settings.store_name as string) ?? "Láminas 2026",
-    min_pickup_qty: Number(settings.min_pickup_qty ?? 15),
+    min_pickup_qty: Number(settings.min_pickup_qty ?? 1),
     min_shipping_qty: Number(settings.min_shipping_qty ?? 50),
-    shipping_cost: Number(settings.shipping_cost ?? 4490),
+    shipping_cost: Number(settings.shipping_cost ?? 2000),
     pickup_city: (settings.pickup_city as string) ?? "Osorno",
   };
 }
@@ -129,21 +128,4 @@ export async function getCheckoutSettingsAction(accessToken: string) {
     pickup_city: (map.pickup_city as string) ?? "Osorno",
     hasOrder: !!order,
   };
-}
-
-export async function requireAdminAction() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const admin = createAdminClient();
-  const { data: profile } = await admin
-    .from("admin_profiles")
-    .select("id, email")
-    .eq("id", user.id)
-    .single();
-
-  return profile ? { id: profile.id, email: profile.email } : null;
 }
