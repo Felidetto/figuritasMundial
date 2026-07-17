@@ -83,8 +83,15 @@ test.describe("Smoke local — público", () => {
 test.describe("Smoke local — admin", () => {
   test("inventario redirige a login sin sesión", async ({ page }) => {
     await page.goto("/admin/inventario");
+    await expect(page).toHaveURL(/\/admin\/login/, { timeout: 15000 });
+    await expect(page.getByRole("heading", { name: /Panel Super Admin/i })).toBeVisible({
+      timeout: 10000,
+    });
+  });
+
+  test("dashboard redirige a login sin sesión", async ({ page }) => {
+    await page.goto("/admin/dashboard");
     await expect(page).toHaveURL(/\/admin\/login/);
-    await expect(page.getByRole("heading", { name: /admin/i })).toBeVisible();
   });
 
   test("login admin e inventario", async ({ page }) => {
@@ -93,35 +100,33 @@ test.describe("Smoke local — admin", () => {
     await page.goto("/admin/login");
     await page.getByLabel("Correo").fill(adminEmail!);
     await page.getByLabel("Contraseña").fill(adminPassword!);
-    await page.getByRole("button", { name: "Ingresar" }).click();
-    await page.waitForURL(/\/admin(?!\/login)/, { timeout: 15000 });
+    await page.getByRole("button", { name: "Iniciar sesión" }).click();
+    await page.waitForURL(/\/admin\/dashboard/, { timeout: 15000 });
 
     await page.goto("/admin/inventario");
     await expect(page.getByRole("heading", { name: "Inventario" })).toBeVisible();
-    await expect(page.getByText("FWC 1").first()).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText("ARG 10").first()).toBeVisible({ timeout: 15000 });
   });
 
   test("ajuste de stock admin y reflejo en /elegir", async ({ page }) => {
     test.skip(!hasAdminCreds, "Define E2E_ADMIN_EMAIL y E2E_ADMIN_PASSWORD en .env.local");
 
-    page.on("dialog", (dialog) => dialog.accept("ajuste inicial"));
-
     await page.goto("/admin/login");
     await page.getByLabel("Correo").fill(adminEmail!);
     await page.getByLabel("Contraseña").fill(adminPassword!);
-    await page.getByRole("button", { name: "Ingresar" }).click();
-    await page.waitForURL(/\/admin(?!\/login)/);
+    await page.getByRole("button", { name: "Iniciar sesión" }).click();
+    await page.waitForURL(/\/admin\/dashboard/);
 
     await page.goto("/admin/inventario");
     await page.getByPlaceholder(/buscar/i).fill("ARG 10");
     await page.waitForTimeout(500);
 
-    const row = page.locator("tr").filter({ hasText: "ARG 10" }).first();
-    await expect(row).toBeVisible();
+    const card = page.locator("div").filter({ hasText: /^ARG 10$/ }).first();
+    await expect(card).toBeVisible();
 
-    const plusBtn = row.getByRole("button", { name: "+" }).first();
+    const plusBtn = card.locator("..").getByRole("button", { name: "+" });
     await plusBtn.click();
-    await page.waitForLoadState("networkidle");
+    await page.waitForTimeout(1000);
 
     await page.goto("/elegir");
     await page.getByLabel("Buscar láminas").fill("ARG 10");
