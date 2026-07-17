@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
-import { requireAdminAction } from "@/actions/catalog";
+import { requireSuperAdminAction } from "@/lib/admin-auth";
 import { settingsSchema, stockAdjustSchema } from "@/lib/validation/schemas";
 import { z } from "zod";
 
@@ -16,7 +16,7 @@ const stockDeltaSchema = z.object({
 });
 
 export async function confirmPaymentAction(orderId: string) {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return { success: false, error: "UNAUTHORIZED" };
 
   const supabase = createAdminClient();
@@ -31,7 +31,7 @@ export async function confirmPaymentAction(orderId: string) {
 }
 
 export async function cancelOrderAction(orderId: string, reason?: string) {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return { success: false, error: "UNAUTHORIZED" };
 
   const supabase = createAdminClient();
@@ -47,7 +47,7 @@ export async function cancelOrderAction(orderId: string, reason?: string) {
 }
 
 export async function markDeliveredAction(orderId: string) {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return { success: false, error: "UNAUTHORIZED" };
 
   const supabase = createAdminClient();
@@ -63,7 +63,7 @@ export async function markDeliveredAction(orderId: string) {
 }
 
 export async function adjustStockAction(input: unknown) {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return { success: false, error: "UNAUTHORIZED" };
 
   const parsed = stockAdjustSchema.safeParse(input);
@@ -85,7 +85,7 @@ export async function adjustStockAction(input: unknown) {
 }
 
 export async function toggleStickerAction(stickerId: string, enabled: boolean) {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return { success: false, error: "UNAUTHORIZED" };
 
   const supabase = createAdminClient();
@@ -97,7 +97,7 @@ export async function toggleStickerAction(stickerId: string, enabled: boolean) {
 }
 
 export async function updateSettingsAction(input: unknown) {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return { success: false, error: "UNAUTHORIZED" };
 
   const parsed = settingsSchema.safeParse(input);
@@ -106,6 +106,7 @@ export async function updateSettingsAction(input: unknown) {
   const supabase = createAdminClient();
   const entries: Array<[string, unknown]> = [
     ["whatsapp", JSON.stringify(parsed.data.whatsapp)],
+    ["min_shipping_qty", parsed.data.min_shipping_qty],
     ["shipping_cost", parsed.data.shipping_cost],
     ["reservation_ttl_minutes", parsed.data.reservation_ttl_minutes],
     ["payment_ttl_hours", parsed.data.payment_ttl_hours],
@@ -124,7 +125,7 @@ export async function updateSettingsAction(input: unknown) {
 }
 
 export async function adjustStockDeltaAction(input: unknown) {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return { success: false, error: "UNAUTHORIZED" };
 
   const parsed = stockDeltaSchema.safeParse(input);
@@ -154,7 +155,7 @@ export async function adjustStockDeltaAction(input: unknown) {
 }
 
 export async function updateStickerNameAction(stickerId: string, name: string) {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return { success: false, error: "UNAUTHORIZED" };
 
   const supabase = createAdminClient();
@@ -165,7 +166,7 @@ export async function updateStickerNameAction(stickerId: string, name: string) {
 }
 
 export async function exportInventoryAction(): Promise<string | null> {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return null;
 
   const supabase = createAdminClient();
@@ -232,7 +233,7 @@ function parseCsvRows(csvContent: string) {
 }
 
 export async function previewCsvAction(csvContent: string, mode: "replace" | "add") {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return { valid: 0, invalid: ["No autorizado"], updates: [] };
 
   const parsed = parseCsvRows(csvContent);
@@ -266,7 +267,7 @@ export async function importCsvAction(
   csvContent: string,
   mode: "replace" | "add" = "replace",
 ) {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return { success: false, error: "UNAUTHORIZED", rows: [] as string[] };
 
   const parsed = parseCsvRows(csvContent);
@@ -332,9 +333,22 @@ export async function importCsvAction(
 }
 
 export async function adminLoginAction(email: string, password: string) {
-  const supabase = await (await import("@/lib/supabase/server")).createClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { success: false, error: error.message };
+  const supabase = await createClient();
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) return { success: false, error: "Credenciales incorrectas" };
+
+  const admin = createAdminClient();
+  const { data: profile } = await admin
+    .from("admin_profiles")
+    .select("id, role")
+    .eq("id", data.user.id)
+    .single();
+
+  if (!profile || profile.role !== "super_admin") {
+    await supabase.auth.signOut();
+    return { success: false, error: "No tienes autorización para acceder a este panel" };
+  }
+
   return { success: true };
 }
 
@@ -345,45 +359,59 @@ export async function adminLogoutAction() {
 }
 
 export async function getAdminDashboardAction() {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return null;
 
-  const supabase = createAdminClient();
-  await supabase.rpc("expire_reservations");
+  const userSupabase = await createClient();
+  const adminSupabase = createAdminClient();
+  await adminSupabase.rpc("expire_reservations");
 
-  const [inventory, orders, reservations] = await Promise.all([
-    supabase.from("sticker_catalog").select("available_qty, physical_stock, reserved_stock, sold_stock"),
-    supabase.from("orders").select("id, public_code, status, total, created_at").order("created_at", { ascending: false }).limit(20),
-    supabase
+  const { data: statsData } = await userSupabase.rpc("get_admin_dashboard_stats");
+
+  const [orders, reservations] = await Promise.all([
+    adminSupabase
+      .from("orders")
+      .select("id, public_code, status, total, item_count, delivery_method, created_at, customers(full_name)")
+      .order("created_at", { ascending: false })
+      .limit(15),
+    adminSupabase
       .from("reservations")
       .select("id, public_code, status, expires_at, item_count, total")
       .in("status", ["reserved", "awaiting_payment"])
       .order("expires_at")
-      .limit(20),
+      .limit(10),
   ]);
 
-  const items = inventory.data ?? [];
-  const totalAvailable = items.reduce((s, i) => s + (i.available_qty ?? 0), 0);
-  const totalPhysical = items.reduce((s, i) => s + (i.physical_stock ?? 0), 0);
-  const totalReserved = items.reduce((s, i) => s + (i.reserved_stock ?? 0), 0);
-  const totalSold = items.reduce((s, i) => s + (i.sold_stock ?? 0), 0);
-  const pendingOrders = (orders.data ?? []).filter((o) =>
-    ["awaiting_payment", "payment_reported"].includes(o.status),
-  );
-  const salesTotal = (orders.data ?? [])
-    .filter((o) => o.status === "paid" || o.status === "delivered")
-    .reduce((s, o) => s + o.total, 0);
+  const stats = (statsData ?? {}) as Record<string, number>;
+
+  const recentOrders = (orders.data ?? []).map((o) => ({
+    ...o,
+    customer_name: (o.customers as { full_name?: string } | null)?.full_name ?? null,
+  }));
 
   return {
-    stats: { totalAvailable, totalPhysical, totalReserved, totalSold, salesTotal },
-    orders: orders.data ?? [],
-    pendingOrders,
+    stats: {
+      sales_today_count: stats.sales_today_count ?? 0,
+      sales_month_count: stats.sales_month_count ?? 0,
+      revenue_today: stats.revenue_today ?? 0,
+      revenue_month: stats.revenue_month ?? 0,
+      pending_payment: stats.pending_payment ?? 0,
+      paid_orders: stats.paid_orders ?? 0,
+      delivered_orders: stats.delivered_orders ?? 0,
+      stickers_sold: stats.stickers_sold ?? 0,
+      stock_available: stats.stock_available ?? 0,
+      codes_with_stock: stats.codes_with_stock ?? 0,
+      codes_out_of_stock: stats.codes_out_of_stock ?? 0,
+      active_reservations: stats.active_reservations ?? 0,
+      expiring_soon: stats.expiring_soon ?? 0,
+    },
+    recentOrders,
     reservations: reservations.data ?? [],
   };
 }
 
 export async function getAdminInventoryAction() {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return [];
 
   const supabase = createAdminClient();
@@ -397,7 +425,7 @@ export async function getAdminInventoryAction() {
 }
 
 export async function getAdminOrdersAction() {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return [];
 
   const supabase = createAdminClient();
@@ -410,7 +438,7 @@ export async function getAdminOrdersAction() {
 }
 
 export async function getAdminSettingsAction() {
-  const admin = await requireAdminAction();
+  const admin = await requireSuperAdminAction();
   if (!admin) return null;
 
   const supabase = createAdminClient();

@@ -1,17 +1,14 @@
-import { redirect } from "next/navigation";
+import { AdminPage } from "@/app/admin/layout";
 import { getAdminInventoryAction } from "@/actions/admin";
-import { AdminNav } from "@/components/admin/admin-nav";
-import { InventoryAdmin } from "@/components/admin/inventory-admin";
+import { InventoryVisualAdmin } from "@/components/admin/inventory-visual-admin";
 
 export default async function AdminInventoryPage() {
   const rows = await getAdminInventoryAction();
-  if (!rows) redirect("/admin/login");
+  if (!rows) return null;
 
   return (
-    <div>
-      <AdminNav />
-      <h1 className="mb-6 text-2xl font-bold">Inventario</h1>
-      <InventoryAdmin rows={rows as Parameters<typeof InventoryAdmin>[0]["rows"]} />
-    </div>
+    <AdminPage title="Inventario">
+      <InventoryVisualAdmin initialRows={rows as Parameters<typeof InventoryVisualAdmin>[0]["initialRows"]} />
+    </AdminPage>
   );
 }

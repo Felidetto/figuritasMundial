@@ -25,6 +25,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
       await updateSettingsAction({
         whatsapp: fd.get("whatsapp") as string,
         shipping_cost: parseInt(fd.get("shipping_cost") as string, 10),
+        min_shipping_qty: parseInt(fd.get("min_shipping_qty") as string, 10),
         reservation_ttl_minutes: parseInt(fd.get("reservation_ttl_minutes") as string, 10),
         payment_ttl_hours: parseInt(fd.get("payment_ttl_hours") as string, 10),
         pickup_address: fd.get("pickup_address") as string,
@@ -51,7 +52,16 @@ export function SettingsForm({ settings }: SettingsFormProps) {
         <input
           name="shipping_cost"
           type="number"
-          defaultValue={Number(settings.shipping_cost ?? 4490)}
+          defaultValue={Number(settings.shipping_cost ?? 2000)}
+          className="mt-1 w-full rounded border px-3 py-2"
+        />
+      </div>
+      <div>
+        <label className="text-sm font-medium">Mínimo láminas para despacho</label>
+        <input
+          name="min_shipping_qty"
+          type="number"
+          defaultValue={Number(settings.min_shipping_qty ?? 50)}
           className="mt-1 w-full rounded border px-3 py-2"
         />
       </div>

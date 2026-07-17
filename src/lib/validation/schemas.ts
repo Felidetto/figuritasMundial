@@ -45,6 +45,7 @@ export const stockAdjustSchema = z.object({
 export const settingsSchema = z.object({
   whatsapp: z.string().min(8),
   shipping_cost: z.number().int().min(0),
+  min_shipping_qty: z.number().int().min(1).default(50),
   reservation_ttl_minutes: z.number().int().min(5),
   payment_ttl_hours: z.number().int().min(1),
   pickup_address: z.string().min(5),
