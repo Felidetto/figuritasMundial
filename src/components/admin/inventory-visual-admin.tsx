@@ -60,6 +60,16 @@ function toSections(rows: InventoryRow[]): CatalogSectionDTO[] {
   return Array.from(map.values()).sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+function sectionStats(stickers: CatalogSectionDTO["stickers"]) {
+  return {
+    physical: stickers.reduce((s, st) => s + st.physicalStock, 0),
+    available: stickers.reduce((s, st) => s + st.availableStock, 0),
+    reserved: stickers.reduce((s, st) => s + st.reservedStock, 0),
+    withStock: stickers.filter((st) => st.availableStock > 0).length,
+    total: stickers.length,
+  };
+}
+
 function availableQty(physical: number, reserved: number, sold: number) {
   return Math.max(physical - reserved - sold, 0);
 }
@@ -255,40 +265,42 @@ export function InventoryVisualAdmin({ initialRows }: { initialRows: InventoryRo
 
   return (
     <div>
-      <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {[
-          ["Stock físico total", summary.physical],
-          ["Disponibles", summary.available],
-          ["Reservadas", summary.reserved],
-          ["Con stock", summary.withStock],
-          ["Agotados", summary.out],
-        ].map(([label, val]) => (
-          <div key={label as string} className="rounded-lg border bg-white p-3 text-sm">
-            <p className="text-slate-500">{label}</p>
-            <p className="text-xl font-bold">{val}</p>
-          </div>
-        ))}
-      </div>
+      <div className="sticky top-14 z-30 -mx-4 mb-4 space-y-3 border-b border-slate-200 bg-slate-50/95 px-4 pb-4 pt-1 backdrop-blur-sm lg:top-0 lg:-mx-8 lg:px-8">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-5 lg:gap-3">
+          {[
+            ["Stock físico total", summary.physical],
+            ["Disponibles", summary.available],
+            ["Reservadas", summary.reserved],
+            ["Con stock", summary.withStock],
+            ["Agotados", summary.out],
+          ].map(([label, val]) => (
+            <div key={label as string} className="rounded-lg border bg-white p-2.5 text-sm shadow-sm sm:p-3">
+              <p className="text-slate-500">{label}</p>
+              <p className="text-lg font-bold sm:text-xl">{val}</p>
+            </div>
+          ))}
+        </div>
 
-      <div className="mb-4 flex flex-col gap-3 rounded-xl border bg-white p-4 sm:flex-row">
-        <input
-          type="search"
-          placeholder="Buscar ARG10, Argentina…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="flex-1 rounded-lg border px-3 py-2 text-sm"
-        />
-        <select
-          value={filter}
-          onChange={(e) => setFilter(e.target.value as Filter)}
-          className="rounded-lg border px-3 py-2 text-sm"
-        >
-          <option value="all">Todas</option>
-          <option value="with_stock">Con stock</option>
-          <option value="out">Agotadas</option>
-          <option value="last_unit">Última unidad</option>
-          <option value="reserved">Con reservas</option>
-        </select>
+        <div className="flex flex-col gap-3 rounded-xl border bg-white p-3 shadow-sm sm:flex-row sm:p-4">
+          <input
+            type="search"
+            placeholder="Buscar ARG10, Argentina…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1 rounded-lg border px-3 py-2 text-sm"
+          />
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value as Filter)}
+            className="rounded-lg border px-3 py-2 text-sm"
+          >
+            <option value="all">Todas</option>
+            <option value="with_stock">Con stock</option>
+            <option value="out">Agotadas</option>
+            <option value="last_unit">Última unidad</option>
+            <option value="reserved">Con reservas</option>
+          </select>
+        </div>
       </div>
 
       {message && <p className="mb-3 text-sm text-emerald-700">{message}</p>}
@@ -298,11 +310,28 @@ export function InventoryVisualAdmin({ initialRows }: { initialRows: InventoryRo
       </p>
 
       <div className="space-y-4">
-        {sections.map((sec) => (
+        {sections.map((sec) => {
+          const stats = sectionStats(sec.stickers);
+          return (
           <div key={sec.sectionCode} className="rounded-xl border bg-white p-4">
-            <h3 className="mb-3 font-bold">
-              {sec.sectionCode} — {sec.sectionName}
-            </h3>
+            <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:items-baseline sm:justify-between sm:gap-x-4">
+              <h3 className="font-bold">
+                {sec.sectionCode} — {sec.sectionName}
+              </h3>
+              <p className="text-sm text-slate-600">
+                <span className="font-semibold text-emerald-800">{stats.physical}</span> en stock
+                {" · "}
+                <span className="font-semibold text-emerald-700">{stats.available}</span> disponibles
+                {stats.reserved > 0 && (
+                  <>
+                    {" · "}
+                    <span className="font-semibold text-amber-700">{stats.reserved}</span> reservadas
+                  </>
+                )}
+                {" · "}
+                {stats.withStock}/{stats.total} códigos con stock
+              </p>
+            </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
               {sec.stickers.map((dto) => {
                 const row = rows.find((r) => r.id === dto.id)!;
@@ -342,7 +371,8 @@ export function InventoryVisualAdmin({ initialRows }: { initialRows: InventoryRo
               })}
             </div>
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
