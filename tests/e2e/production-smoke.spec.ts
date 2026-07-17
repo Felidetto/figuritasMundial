@@ -58,7 +58,7 @@ test.describe("Smoke producción", () => {
   test("precios públicos actualizados", async ({ page }) => {
     await page.goto("/");
     await expect(page.getByText(/Pack de 50 láminas a elección/i)).toBeVisible();
-    await expect(page.getByText(/\$15\.000|\$15,000|15\.000/)).toBeVisible();
+    await expect(page.getByText(/\$15\.000|\$15,000|15\.000/).first()).toBeVisible();
     await expect(page.getByText(/Desde la lámina 51/i)).toBeVisible();
     await expect(page.getByText(/Despacho.*2\.000|2,000/i)).toBeVisible();
   });
