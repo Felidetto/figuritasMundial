@@ -70,9 +70,12 @@ export default async function HomePage() {
             </p>
           </div>
           <div>
-            <h3 className="font-medium text-emerald-800">Despacho — {formatCLP(settings.shipping_cost ?? 2000)}</h3>
+            <h3 className="font-medium text-emerald-800">
+              Despacho — {formatCLP(settings.shipping_cost ?? 1500)}
+            </h3>
             <p className="text-sm text-slate-600">
-              Disponible desde {settings.min_shipping_qty ?? 50} láminas. Pagado por el comprador.
+              Solo en {settings.pickup_city ?? "Osorno"}. Disponible desde{" "}
+              {settings.min_shipping_qty ?? 50} láminas. Pagado por el comprador.
             </p>
           </div>
         </div>

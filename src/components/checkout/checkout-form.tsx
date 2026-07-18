@@ -173,7 +173,7 @@ export function CheckoutForm({
               {...register("deliveryMethod")}
               disabled={reservation.item_count < minShipping}
             />
-            Despacho — {formatCLP(shippingCostClp)} — Disponible desde {minShipping} láminas
+            Despacho — {formatCLP(shippingCostClp)} — Solo en Osorno — desde {minShipping} láminas
             {reservation.item_count < minShipping && (
               <span className="text-xs text-slate-500">(desde {minShipping} láminas)</span>
             )}

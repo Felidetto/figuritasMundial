@@ -26,7 +26,8 @@ export const PACK_50_TOTAL = 15000;
 export const PACK_50_QTY = 50;
 export const DEFAULT_MIN_PICKUP = 1;
 export const DEFAULT_MIN_SHIPPING = 50;
-export const DEFAULT_SHIPPING_COST = 2000;
+export const DEFAULT_SHIPPING_COST = 1500;
+export const DEFAULT_SHIPPING_CITY = "Osorno";
 
 /** Regla comercial definitiva — mirror de calculate_order_pricing SQL */
 export function calculatePricing(qty: number): PricingResult {

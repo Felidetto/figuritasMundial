@@ -52,7 +52,7 @@ export function SettingsForm({ settings }: SettingsFormProps) {
         <input
           name="shipping_cost"
           type="number"
-          defaultValue={Number(settings.shipping_cost ?? 2000)}
+          defaultValue={Number(settings.shipping_cost ?? 1500)}
           className="mt-1 w-full rounded border px-3 py-2"
         />
       </div>

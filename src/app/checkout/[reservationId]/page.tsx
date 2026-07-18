@@ -33,7 +33,7 @@ async function getCheckoutSettings() {
     },
     pickupCity: (map.pickup_city as string) ?? "Osorno",
     minShipping: Number(map.min_shipping_qty ?? 50),
-    shippingCost: Number(map.shipping_cost ?? 4490),
+    shippingCost: Number(map.shipping_cost ?? 1500),
   };
 }
 

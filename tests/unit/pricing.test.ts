@@ -49,13 +49,13 @@ describe("entrega y despacho", () => {
   it.each([
     [49, "pickup", 19600],
     [50, "pickup", 15000],
-    [50, "shipping", 17000],
+    [50, "shipping", 16500],
     [51, "pickup", 15400],
-    [51, "shipping", 17400],
+    [51, "shipping", 16900],
     [53, "pickup", 16200],
-    [53, "shipping", 18200],
+    [53, "shipping", 17700],
     [100, "pickup", 35000],
-    [100, "shipping", 37000],
+    [100, "shipping", 36500],
   ])("%i con %s → total %i", (qty, method, expected) => {
     expect(
       totalWithShipping(qty, undefined, method as "pickup" | "shipping", DEFAULT_SHIPPING_COST),
@@ -86,7 +86,7 @@ describe("constantes", () => {
     expect(PACK_50_QTY).toBe(50);
     expect(DEFAULT_MIN_PICKUP).toBe(1);
     expect(DEFAULT_MIN_SHIPPING).toBe(50);
-    expect(DEFAULT_SHIPPING_COST).toBe(2000);
+    expect(DEFAULT_SHIPPING_COST).toBe(1500);
   });
 
   it("qtyToPromo50", () => {

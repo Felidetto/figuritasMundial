@@ -73,7 +73,7 @@ export async function getPublicSettingsAction(): Promise<Partial<AppSettings>> {
       store_name: "Láminas 2026",
       min_pickup_qty: 1,
       min_shipping_qty: 50,
-      shipping_cost: 2000,
+      shipping_cost: 1500,
       pickup_city: "Osorno",
     };
   }
@@ -97,7 +97,7 @@ export async function getPublicSettingsAction(): Promise<Partial<AppSettings>> {
     store_name: (settings.store_name as string) ?? "Láminas 2026",
     min_pickup_qty: Number(settings.min_pickup_qty ?? 1),
     min_shipping_qty: Number(settings.min_shipping_qty ?? 50),
-    shipping_cost: Number(settings.shipping_cost ?? 2000),
+    shipping_cost: Number(settings.shipping_cost ?? 1500),
     pickup_city: (settings.pickup_city as string) ?? "Osorno",
   };
 }

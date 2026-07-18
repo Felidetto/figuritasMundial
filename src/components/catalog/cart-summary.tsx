@@ -66,7 +66,7 @@ function SummaryContent({
 
       {totalQty >= minShipping && (
         <p className="mt-1 text-xs text-slate-500">
-          Despacho disponible desde {minShipping} láminas (+{formatCLP(shippingCost)})
+          Despacho en Osorno (+{formatCLP(shippingCost)})
         </p>
       )}
 

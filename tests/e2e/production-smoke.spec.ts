@@ -60,7 +60,7 @@ test.describe("Smoke producción", () => {
     await expect(page.getByText(/Pack de 50 láminas a elección/i)).toBeVisible();
     await expect(page.getByText(/\$15\.000|\$15,000|15\.000/).first()).toBeVisible();
     await expect(page.getByText(/Desde la lámina 51/i)).toBeVisible();
-    await expect(page.getByText(/Despacho.*2\.000|2,000/i)).toBeVisible();
+    await expect(page.getByText(/Despacho.*1\.500|1,500/i)).toBeVisible();
   });
 
   test("no expone service role en HTML", async ({ page }) => {

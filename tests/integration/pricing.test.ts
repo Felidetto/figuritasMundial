@@ -39,11 +39,11 @@ describe.skipIf(skip)("calculate_order_pricing RPC", () => {
   it.each([
     [49, "pickup", 19600],
     [50, "pickup", 15000],
-    [50, "shipping", 17000],
+    [50, "shipping", 16500],
     [51, "pickup", 15400],
-    [51, "shipping", 17400],
+    [51, "shipping", 16900],
     [100, "pickup", 35000],
-    [100, "shipping", 37000],
+    [100, "shipping", 36500],
   ])("%i %s → total %i", async (qty, method, expected) => {
     const { data: pricing } = await supabase.rpc("calculate_order_pricing", { p_qty: qty });
     const { data: ship, error } = await supabase.rpc("calculate_shipping_cost", {

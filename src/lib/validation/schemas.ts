@@ -33,6 +33,11 @@ export const checkoutSchema = z.object({
 }).refine(
   (data) => data.deliveryMethod !== "shipping" || (data.address && data.address.length >= 5),
   { message: "Ingresa dirección para despacho", path: ["address"] },
+).refine(
+  (data) =>
+    data.deliveryMethod !== "shipping" ||
+    data.commune.trim().toLowerCase() === "osorno",
+  { message: "El despacho solo está disponible en Osorno", path: ["commune"] },
 );
 
 export const stockAdjustSchema = z.object({

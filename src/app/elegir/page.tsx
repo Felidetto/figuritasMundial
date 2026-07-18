@@ -32,7 +32,7 @@ export default async function ElegirPage() {
         pricingRules={pricingRules}
         minPickup={settings.min_pickup_qty ?? 15}
         minShipping={settings.min_shipping_qty ?? 50}
-        shippingCost={settings.shipping_cost ?? 4490}
+        shippingCost={settings.shipping_cost ?? 1500}
       />
     </div>
   );
